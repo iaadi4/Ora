@@ -9,6 +9,8 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.817.0",
+    "@aws-sdk/lib-storage": "^3.817.0",
     "@hookform/resolvers": "^5.0.1",
     "@prisma/client": "^6.8.2",
     "@prisma/extension-accelerate": "^2.0.0",
@@ -26,6 +28,7 @@
     "sonner": "^2.0.3",
     "tailwind-merge": "^3.3.0",
     "tsx": "^4.19.4",
+    "uuid": "^11.1.0",
     "zod": "^3.25.28"
   },
   "devDependencies": {
