@@ -5,9 +5,10 @@ import { v4 as uuid } from "uuid";
 const AWS_ACCESS_KEY_ID = process.env.AWS_ACCESS_KEY_ID;
 const AWS_SECRET_ACCESS_KEY = process.env.AWS_SECRET_ACCESS_KEY;
 const AWS_BUCKET_NAME  = process.env.AWS_BUCKET_NAME;
+const BUCKET_REGION = process.env.BUCKET_REGION;
 
 const s3Client = new S3Client({
-    region: "ap-southeast-2",
+    region: BUCKET_REGION,
     credentials: {
         accessKeyId: AWS_ACCESS_KEY_ID!,
         secretAccessKey: AWS_SECRET_ACCESS_KEY!,
