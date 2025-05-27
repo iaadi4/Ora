@@ -151,62 +151,64 @@ const OraLandingPage = () => {
         </div>
 
         <div 
-          className="absolute inset-0 opacity-8"
+          className="absolute inset-0 opacity-30"
           style={{
             backgroundImage: `
-              linear-gradient(rgba(147, 51, 234, 0.12) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(147, 51, 234, 0.12) 1px, transparent 1px)
+              linear-gradient(rgba(147, 51, 234, 0.4) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(147, 51, 234, 0.4) 1px, transparent 1px)
             `,
-            backgroundSize: '100px 100px',
+            backgroundSize: '60px 60px',
           }}
         />
       </div>
 
       <div className="relative z-10 px-8 md:px-12 lg:px-16 py-16 md:py-20 lg:py-24">
         <div className="max-w-6xl mx-auto text-center">
-          
-          <div className="mb-16 md:mb-20 lg:mb-24">
+
+          <div className="mb-14 mt-16 md:mb-12 lg:mb-12">
             <div 
-              className="w-28 h-28 md:w-32 md:h-32 lg:w-36 lg:h-36 mx-auto mb-8 md:mb-10 lg:mb-12 relative"
+              className="flex items-center justify-center gap-6 md:gap-10 lg:gap-12 mb-8 md:mb-10 lg:mb-12"
               style={{
-                animation: 'fadeInScale 1.5s ease-out, breathe 4s ease-in-out infinite 2s',
+                animation: 'fadeInScale 1.5s ease-out',
               }}
             >
-              <div className="absolute inset-0 rounded-full bg-gradient-to-r from-purple-500/30 to-indigo-600/30 blur-xl animate-pulse"></div>
+              <div 
+                className="w-24 h-24 md:w-28 md:h-28 lg:w-32 lg:h-32 relative flex-shrink-0"
+                style={{
+                  animation: 'breathe 4s ease-in-out infinite 2s',
+                }}
+              >
+                <div className="absolute inset-0 rounded-full bg-gradient-to-r from-purple-500/30 to-indigo-600/30 blur-xl animate-pulse"></div>
 
-              <div className="relative w-full h-full bg-gradient-to-br from-purple-500 via-indigo-600 to-purple-700 rounded-full flex items-center justify-center shadow-2xl shadow-purple-500/30">
-                <div className="w-12 h-12 md:w-16 md:h-16 bg-white rounded-full flex items-center justify-center relative overflow-hidden">
-                  <svg width="32" height="32" viewBox="0 0 48 48" className="text-gray-800 md:w-10 md:h-10">
-                    <path 
-                      d="M24 4C13.5 4 5 12.5 5 23s8.5 19 19 19c8.5 0 15.5-5.5 18-13M24 12c-6 0-11 5-11 11s5 11 11 11c4.5 0 8.5-2.5 10.5-6.5" 
-                      fill="none" 
-                      stroke="currentColor" 
-                      strokeWidth="3" 
-                      strokeLinecap="round"
-                      style={{ 
-                        transformOrigin: '24px 24px', 
-                        animation: 'rotate-smooth 12s linear infinite'
-                      }}
-                    />
-                  </svg>
+                <div className="relative w-full h-full bg-gradient-to-br from-purple-500 via-indigo-600 to-purple-700 rounded-full flex items-center justify-center shadow-2xl shadow-purple-500/30">
+                  <div className="w-10 h-10 md:w-12 md:h-12 lg:w-14 lg:h-14 bg-white rounded-full flex items-center justify-center relative overflow-hidden">
+                    <svg width="24" height="24" viewBox="0 0 48 48" className="text-gray-800 md:w-7 md:h-7 lg:w-8 lg:h-8">
+                      <path 
+                        d="M24 4C13.5 4 5 12.5 5 23s8.5 19 19 19c8.5 0 15.5-5.5 18-13M24 12c-6 0-11 5-11 11s5 11 11 11c4.5 0 8.5-2.5 10.5-6.5" 
+                        fill="none" 
+                        stroke="currentColor" 
+                        strokeWidth="3" 
+                        strokeLinecap="round"
+                        style={{ 
+                          transformOrigin: '24px 24px', 
+                          animation: 'rotate-smooth 12s linear infinite'
+                        }}
+                      />
+                    </svg>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <h1 
-              className="text-6xl md:text-8xl lg:text-9xl font-bold mb-6 md:mb-8 lg:mb-10"
-              style={{
-                animation: 'fadeInUp 1.5s ease-out 0.3s both',
-              }}
-            >
-              <span className="bg-gradient-to-r from-white via-purple-200 to-indigo-200 bg-clip-text text-transparent">
-                Ora
-              </span>
-            </h1>
+              <h1 className="text-6xl md:text-8xl lg:text-9xl font-bold">
+                <span className="bg-gradient-to-r from-white via-purple-200 to-indigo-200 bg-clip-text text-transparent">
+                  Ora
+                </span>
+              </h1>
+            </div>
           </div>
 
           <div 
-            className="mb-16 md:mb-20 lg:mb-24 space-y-4 md:space-y-6 lg:space-y-8 px-4 md:px-8 lg:px-0"
+            className="mb-12 md:mb-20 lg:mb-20 space-y-4 md:space-y-6 lg:space-y-8 px-4 md:px-8 lg:px-0"
             style={{
               animation: 'fadeInUp 1.5s ease-out 0.6s both',
             }}
@@ -221,7 +223,7 @@ const OraLandingPage = () => {
           </div>
 
           <div 
-            className="mb-20 md:mb-24 lg:mb-28 px-4 md:px-8 lg:px-0"
+            className="mb-24 md:mb-24 lg:mb-32 px-4 md:px-8 lg:px-0"
             style={{
               animation: 'fadeInUp 1.5s ease-out 0.9s both',
             }}
@@ -247,10 +249,6 @@ const OraLandingPage = () => {
                 </div>
               ))}
             </div>
-            
-            <p className="text-gray-400 font-medium text-base md:text-lg lg:text-xl">
-              Listen to your thoughts flow
-            </p>
           </div>
 
           <div 
@@ -259,8 +257,11 @@ const OraLandingPage = () => {
               animation: 'fadeInUp 1.5s ease-out 1.2s both',
             }}
           >
+            <p className="text-gray-400 mb-5 lg:mb-10 font-medium text-base md:text-lg lg:text-xl">
+              Listen to your thoughts flow
+            </p>
             <Link href="/login">
-              <button className="group relative px-10 cursor-pointer md:px-12 lg:px-16 py-4 md:py-5 lg:py-6 bg-gradient-to-r ml-4 from-purple-600 via-purple-500 to-indigo-600 text-white rounded-full font-semibold text-lg md:text-xl lg:text-2xl tracking-wide transition-all duration-500 ease-out hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/40 border border-purple-400/40 hover:border-purple-300/60 backdrop-blur-sm overflow-hidden">
+              <button className="group relative px-10 cursor-pointer md:px-12 lg:px-16 py-4 md:py-5 lg:py-6 bg-gradient-to-r from-purple-600 via-purple-500 to-indigo-600 text-white rounded-full font-semibold text-lg md:text-xl lg:text-2xl tracking-wide transition-all duration-500 ease-out hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/40 border border-purple-400/40 hover:border-purple-300/60 backdrop-blur-sm overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-r from-purple-400/20 to-indigo-400/20 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out"></div>
                 
