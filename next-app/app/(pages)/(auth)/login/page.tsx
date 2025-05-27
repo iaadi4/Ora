@@ -19,13 +19,13 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import loginSchema from "@/lib/schemas/login-schema";
+import loginSchema from "@/next-app/lib/schemas/login-schema";
 import Link from "next/link";
 import { z } from "zod";
 import { toast } from "sonner";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { authClient } from "@/lib/auth-client";
+import { authClient } from "@/next-app/lib/auth-client";
 import { LoaderCircle } from "lucide-react";
 
 export default function Login() {

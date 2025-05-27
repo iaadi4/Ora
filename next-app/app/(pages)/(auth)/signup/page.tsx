@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { LoaderCircle, Eye, EyeOff } from 'lucide-react';
-import { authClient } from '@/lib/auth-client';
+import { authClient } from '@/next-app/lib/auth-client';
 
 interface FormData {
   name: string;

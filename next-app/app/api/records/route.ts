@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
-import { HttpStatus } from "@/lib/http-status";
-import uploadFile from "@/helper/s3-upload";
-import { PrismaClient } from "@/app/generated/prisma";
+import { auth } from "@/next-app/lib/auth";
+import { HttpStatus } from "@/next-app/lib/http-status";
+import uploadFile from "@/next-app/helper/s3-upload";
+import { PrismaClient } from "@/next-app/app/generated/prisma";
 import { v4 as uuidv4 } from 'uuid';
 
 const prisma = new PrismaClient();
