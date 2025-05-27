@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { HttpStatus } from "@/lib/http-status";
 import uploadFile from "@/helper/s3-upload";
-import { randomUUID } from "crypto";
 import { PrismaClient } from "@/app/generated/prisma";
+import { v4 as uuidv4 } from 'uuid';
 
 const prisma = new PrismaClient();
 
@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
 
         const formData = await req.formData();
         const file = formData.get('file') as File;
-        const journalId = formData.get("journalId");
+        const journalId = formData.get("journalId") as string;
         
         if (!file) {
             return NextResponse.json({
@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
 
         const s3Url = await uploadFile({
             buffer: buffer,
-            originalname: `${randomUUID}-${file.name}` || "unknown",
+            originalname: `${uuidv4()}-${file.name}` || "unknown",
         });
 
         if(!s3Url) {
