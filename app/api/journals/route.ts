@@ -1,66 +1,62 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { HttpStatus } from "@/lib/http-status";
-import uploadFile from "@/helper/s3-upload";
-import { randomUUID } from "crypto";
+import { PrismaClient } from "@/app/generated/prisma";
+
+const prisma = new PrismaClient();
 
 export async function POST(req: NextRequest) {
-    const session = await auth.api.getSession({
-        headers: req.headers
-    });
-    if (!session?.user) {
-        return NextResponse.json({
-            success: false,
-            message: "Please login before creating journal",
-            error: {
-                message: "Unauthorized access"
-            }
-        },{
-            status: HttpStatus.UNAUTHORIZED
-        });
-    }
-
     try {
-        const formData = await req.formData();
-        const file = formData.get('file') as File;
-        
-        if (!file) {
+        const session = await auth.api.getSession({
+            headers: req.headers
+        })
+        const user = session?.user;
+        if(!user) {
             return NextResponse.json({
                 success: false,
-                message: "No file uploaded",
+                message: "Please login before creating journal",
                 error: {
-                    message: "Missing file"
+                    message: "Unauthorized access"
                 }
-            },{
-                status: HttpStatus.BAD_REQUEST
-            });
+            }, {
+                status: HttpStatus.UNAUTHORIZED
+            })
         }
 
-        const bytes = await file.arrayBuffer();
-        const buffer = Buffer.from(bytes);
-
-        const s3Url = await uploadFile({
-            buffer: buffer,
-            originalname: `${randomUUID}-${file.name}` || "unknown",
-        });
-
+        const { title } = await req.json();
+        if(!title) {
+            return NextResponse.json({
+                success: false,
+                message: "Title is required for creating journal",
+                error: {
+                    message: "Missing title"
+                }
+            }, {
+                status: HttpStatus.BAD_REQUEST
+            })
+        }
+        const userId = user.id;
+        const journal = await prisma.journal.create({
+            data: {
+                title,
+                userId
+            }
+        })
         return NextResponse.json({
             success: true,
-            message: "Audio uploaded successfully",
-            data: {
-                audioUrl: s3Url
-            }
-        },{
+            message: "Journal created successfully",
+            data: journal
+        }, {
             status: HttpStatus.CREATED
-        });
-
+        })
     } catch (error) {
+        console.error(error);
         return NextResponse.json({
             success: false,
-            message: "Failed to upload file",
-            error: error,
-        },{
+            message: "Internal Server error",
+            error: error
+        }, {
             status: HttpStatus.INTERNAL_SERVER_ERROR
-        });
+        })
     }
 }

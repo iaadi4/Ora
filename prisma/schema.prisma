@@ -19,6 +19,7 @@ model User {
   sessions      Session[]
   accounts      Account[]
   Entry         Entry[]
+  Journal       Journal[]
 
   @@unique([email])
   @@map("user")
@@ -82,7 +83,21 @@ model Entry {
 
   duration  Float?
   language  String?
-  isPrivate Boolean @default(true) 
+  isPrivate Boolean  @default(true)
+  Journal   Journal @relation(fields: [journalId], references: [id])
+  journalId String
 
   @@index([userId, createdAt])
+}
+
+model Journal {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  title     String
+  content   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  isPrivate Boolean  @default(true)
+  entries   Entry[]
 }
