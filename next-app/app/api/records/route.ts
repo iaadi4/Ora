@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/next-app/lib/auth";
-import { HttpStatus } from "@/next-app/lib/http-status";
-import uploadFile from "@/next-app/helper/s3-upload";
-import { PrismaClient } from "@/next-app/app/generated/prisma";
+import { auth } from "@/lib/auth";
+import { HttpStatus } from "@/lib/http-status";
+import uploadFile from "@/helper/s3-upload";
+import { PrismaClient } from "@/app/generated/prisma";
 import { v4 as uuidv4 } from 'uuid';
 
 const prisma = new PrismaClient();
@@ -30,12 +30,12 @@ export async function POST(req: NextRequest) {
         const file = formData.get('file') as File;
         const journalId = formData.get("journalId") as string;
         
-        if (!file) {
+        if (!file || !journalId) {
             return NextResponse.json({
                 success: false,
-                message: "No file uploaded",
+                message: "Missing required fields",
                 error: {
-                    message: "Missing file"
+                    message: "Missing file or journal id"
                 }
             },{
                 status: HttpStatus.BAD_REQUEST

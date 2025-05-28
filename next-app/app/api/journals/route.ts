@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/next-app/lib/auth";
-import { HttpStatus } from "@/next-app/lib/http-status";
-import { PrismaClient } from "@/next-app/app/generated/prisma";
+import { auth } from "@/lib/auth";
+import { HttpStatus } from "@/lib/http-status";
+import { PrismaClient } from "@/app/generated/prisma";
 
 const prisma = new PrismaClient();
 
