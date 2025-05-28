@@ -9,7 +9,7 @@ from transformers import pipeline
 
 app = FastAPI()
 
-model = whisper.load_model("base")
+model = whisper.load_model("tiny.en")
 executor = ThreadPoolExecutor()
 emotion_analyzer = pipeline("text-classification", model="j-hartmann/emotion-english-distilroberta-base", return_all_scores=True)
 
