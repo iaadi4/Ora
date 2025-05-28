@@ -4,6 +4,7 @@ module.exports = {
   experimental: {
     serverActions: {
       bodySizeLimit: '10mb',
-    },
+    }
   },
+  serverExternalPackages: ["pdfkit"],
 }

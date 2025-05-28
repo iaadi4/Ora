@@ -25,7 +25,15 @@ export async function GET(req: NextRequest) {
   const s3Url = searchParams.get("s3Url");
 
   if (!s3Url) {
-    return NextResponse.json({ error: "Missing s3Url param" }, { status: 400 });
+    return NextResponse.json({
+      success: false,
+      message: "Missing required fields",
+      error:  {
+        message: "Missing s3Url param"
+      }
+    },{
+      status: HttpStatus.BAD_REQUEST
+    });
   }
 
   try {
