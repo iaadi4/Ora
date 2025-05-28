@@ -1,6 +1,6 @@
 fastapi
 uvicorn[standard]
-openai-whisper==20230314
-transformers==4.40.1
-torch==2.2.2
+openai-whisper
+transformers
+torch
 ffmpeg-python
