@@ -1,7 +1,7 @@
 "use client";
 
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 const OraLandingPage = () => {
   const [soundWaves, setSoundWaves] = useState(Array(80).fill(0));
@@ -32,9 +32,28 @@ const OraLandingPage = () => {
     { size: 500, x: 75, y: 75, colors: 'from-indigo-600/20 to-purple-800/20' },
   ];
 
+  const audioRef = useRef<HTMLAudioElement>(null);
+
+  useEffect(() => {
+    const handlePlay = () => {
+      audioRef.current?.play().catch(err => {
+        console.error("Audio play blocked:", err);
+      });
+    };
+    
+    window.addEventListener("click", handlePlay);
+    window.addEventListener("touchstart", handlePlay);
+
+    return () => {
+      window.removeEventListener("click", handlePlay);
+      window.removeEventListener("touchstart", handlePlay);
+    };
+  }, []);
+
   return (
     <div className="min-h-screen relative overflow-hidden bg-black">
       <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-black to-purple-900/50">
+        <audio ref={audioRef} src="/snowman.mp3" autoPlay></audio>
 
         {gradientOrbs.map((orb, index) => (
           <div
