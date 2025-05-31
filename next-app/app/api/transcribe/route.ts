@@ -20,9 +20,8 @@ function parseS3Url(url: string) {
   };
 }
 
-export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const s3Url = searchParams.get("s3Url");
+export async function POST(req: NextRequest) {
+  const { s3Url } = await req.json();
 
   if (!s3Url) {
     return NextResponse.json({
