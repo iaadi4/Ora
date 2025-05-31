@@ -83,7 +83,7 @@ model Entry {
 
   duration  Float?
   language  String?
-  isPrivate Boolean  @default(true)
+  isPrivate Boolean @default(true)
   Journal   Journal @relation(fields: [journalId], references: [id])
   journalId String
 

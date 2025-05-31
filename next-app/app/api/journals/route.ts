@@ -60,3 +60,48 @@ export async function POST(req: NextRequest) {
         })
     }
 }
+
+export async function GET(req: NextRequest) {
+    try {
+        const session = await auth.api.getSession({
+            headers: req.headers
+        })
+        const user = session?.user;
+        if(!user) {
+            return NextResponse.json({
+                success: false,
+                message: "Please login before creating journal",
+                error: {
+                    message: "Unauthorized access"
+                }
+            }, {
+                status: HttpStatus.UNAUTHORIZED
+            })
+        }
+
+        const userId = user.id;
+        const journals = await prisma.journal.findMany({
+            where: {
+                userId
+            }
+        })
+
+        return NextResponse.json({
+            success: true,
+            message: "Journals fetched",
+            data: journals
+        }, {
+            status: HttpStatus.OK
+        })
+
+    } catch (error) {
+        console.error(error);
+        return NextResponse.json({
+            success: false,
+            message: "Internal Server error",
+            error: error
+        }, {
+            status: HttpStatus.INTERNAL_SERVER_ERROR
+        })
+    }
+}
