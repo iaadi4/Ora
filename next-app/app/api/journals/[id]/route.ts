@@ -29,6 +29,9 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         where: {
             id,
             userId: user.id,
+        },
+        include: {
+            entries: true
         }
     });
 
