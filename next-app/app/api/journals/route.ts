@@ -103,7 +103,7 @@ export async function GET(req: NextRequest) {
                     const { ...rest } = journal;
                     return rest;
                 });
-            
+                     
             return NextResponse.json({
                 success: true,
                 message: "Top 3 journals fetched",
@@ -116,13 +116,24 @@ export async function GET(req: NextRequest) {
         const journals = await prisma.journal.findMany({
             where: {
                 userId
+            },
+            include: {
+                entries: true
             }
+        });
+
+        const journalsWithCount = journals.map(journal => {
+            const { entries, ...rest } = journal;
+            return {
+                ...rest,
+                entryCount: entries.length
+            };
         });
 
         return NextResponse.json({
             success: true,
             message: "Journals fetched",
-            data: journals
+            data: journalsWithCount
         }, {
             status: HttpStatus.OK
         });

@@ -1,15 +1,16 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Plus,
   BookOpen,
   Mic,
   Calendar,
-  Search,
   Settings,
-  User,
   LogOut,
+  ArrowRight,
 } from "lucide-react";
 
 interface Journal {
@@ -24,6 +25,7 @@ interface Journal {
 }
 
 const JournalHomepage = () => {
+  const router = useRouter();
   const [soundWaves, setSoundWaves] = useState(Array(40).fill(0));
   const [journals, setJournals] = useState<Journal[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -95,6 +97,10 @@ const JournalHomepage = () => {
     } finally {
       setCreateLoading(false);
     }
+  };
+
+  const handleJournalClick = (journalId: string) => {
+    router.push(`/journal/${journalId}`);
   };
 
   const formatDate = (dateString: string) => {
@@ -177,13 +183,7 @@ const JournalHomepage = () => {
           </div>
           <div className="flex items-center gap-4">
             <button className="p-2 text-gray-400 hover:text-white transition-colors">
-              <Search className="w-5 h-5" />
-            </button>
-            <button className="p-2 text-gray-400 hover:text-white transition-colors">
               <Settings className="w-5 h-5" />
-            </button>
-            <button className="p-2 text-gray-400 hover:text-white transition-colors">
-              <User className="w-5 h-5" />
             </button>
             <button className="p-2 text-gray-400 hover:text-white transition-colors">
               <LogOut className="w-5 h-5" />
@@ -228,10 +228,26 @@ const JournalHomepage = () => {
             </button>
           </div>
 
+          {Array.isArray(journals) && journals.length > 0 && (
+            <div className="mb-8">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-2xl font-bold text-white">Recent Journals</h3>
+                <Link
+                  href="/journal"
+                  className="group inline-flex items-center gap-2 px-4 py-2 text-purple-400 hover:text-purple-300 transition-colors"
+                >
+                  <span>View All</span>
+                  <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                </Link>
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {Array.isArray(journals) && journals.map((journal, index) => (
               <div
                 key={journal.id}
+                onClick={() => handleJournalClick(journal.id)}
                 className="group relative p-6 bg-gray-900/40 backdrop-blur-sm rounded-2xl border border-gray-700/50 hover:border-purple-500/50 transition-all duration-300 hover:scale-105 cursor-pointer"
               >
                 <div
