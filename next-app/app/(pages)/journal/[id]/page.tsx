@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { useRouter, useParams } from 'next/navigation';
-import { 
-  Trash2, 
-  Edit3, 
-  FileText, 
-  Download, 
+import { useState, useEffect, useRef, useCallback } from "react";
+import { useRouter, useParams } from "next/navigation";
+import {
+  Trash2,
+  Edit3,
+  FileText,
+  Download,
   ArrowLeft,
   Calendar,
   BookOpen,
@@ -24,11 +24,13 @@ import {
   FileAudio,
   Globe,
   Lock,
-  Heart,
-  Meh,
-  Frown,
-  Languages
-} from 'lucide-react';
+  Languages,
+  MessageSquare,
+  Loader2,
+  FileOutput,
+  LoaderCircle,
+} from "lucide-react";
+import { toast } from "sonner";
 
 interface Entry {
   id: string;
@@ -63,27 +65,62 @@ interface ApiResponse {
   };
 }
 
+interface TranscriptionDialog {
+  open: boolean;
+  data: any;
+}
+
+interface DialogProps {
+  open: boolean;
+  onClose: () => void;
+  children: React.ReactNode;
+}
+
+const Dialog = ({ open, children }: DialogProps) => {
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-gray-900 border border-gray-700 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        {children}
+      </div>
+    </div>
+  );
+};
+
 export default function JournalDetailPage() {
   const router = useRouter();
   const params = useParams();
   const id = params?.id as string;
-  
+
   const [journal, setJournal] = useState<Journal | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [editTitle, setEditTitle] = useState('');
-  const [editContent, setEditContent] = useState('');
+  const [editTitle, setEditTitle] = useState("");
+  const [editContent, setEditContent] = useState("");
   const [updating, setUpdating] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  
+
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   const [playingAudio, setPlayingAudio] = useState<string | null>(null);
-  const audioRefs = useRef<{[key: string]: HTMLAudioElement}>({});
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const progressRef = useRef<HTMLDivElement>(null);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [volume, setVolume] = useState(1);
+
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [isExportingPDF, setIsExportingPDF] = useState(false);
+  const [transcriptionDialog, setTranscriptionDialog] =
+    useState<TranscriptionDialog>({
+      open: false,
+      data: null,
+    });
 
   const gradientOrbs = [
     { size: 400, x: 15, y: 20, colors: "from-purple-600/20 to-indigo-800/25" },
@@ -93,30 +130,32 @@ export default function JournalDetailPage() {
 
   const fetchJournal = useCallback(async () => {
     if (!id) return;
-    
+
     try {
       setLoading(true);
       const response = await fetch(`/api/journals/${id}`, {
-        method: 'GET',
+        method: "GET",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
-        credentials: 'include',
+        credentials: "include",
       });
 
       const data: ApiResponse = await response.json();
-      
+
       if (data.success && data.data) {
         setJournal(data.data as Journal);
         setEditTitle((data.data as Journal).title);
-        setEditContent((data.data as Journal).content || '');
+        setEditContent((data.data as Journal).content || "");
         setError(null);
       } else {
-        setError(data.error?.message || data.message || 'Failed to fetch journal');
+        setError(
+          data.error?.message || data.message || "Failed to fetch journal"
+        );
       }
     } catch (err) {
-      setError('Network error occurred while fetching journal');
-      console.error('Error fetching journal:', err);
+      setError("Network error occurred while fetching journal");
+      console.error("Error fetching journal:", err);
     } finally {
       setLoading(false);
     }
@@ -124,15 +163,15 @@ export default function JournalDetailPage() {
 
   const handleUpdate = async () => {
     if (!journal || !id) return;
-    
+
     try {
       setUpdating(true);
       const response = await fetch(`/api/journals/${id}`, {
-        method: 'PUT',
+        method: "PUT",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
-        credentials: 'include',
+        credentials: "include",
         body: JSON.stringify({
           title: editTitle,
           content: editContent,
@@ -140,47 +179,56 @@ export default function JournalDetailPage() {
       });
 
       const data: ApiResponse = await response.json();
-      
+
       if (data.success && data.data) {
         setJournal(data.data as Journal);
         setIsEditing(false);
         setError(null);
       } else {
-        setError(data.error?.message || data.message || 'Failed to update journal');
+        setError(
+          data.error?.message || data.message || "Failed to update journal"
+        );
       }
     } catch (err) {
-      setError('Network error occurred while updating journal');
-      console.error('Error updating journal:', err);
+      setError("Network error occurred while updating journal");
+      console.error("Error updating journal:", err);
     } finally {
       setUpdating(false);
     }
   };
 
   const handleDelete = async () => {
-    if (!id || !confirm('Are you sure you want to delete this journal? This action cannot be undone.')) {
+    if (
+      !id ||
+      !confirm(
+        "Are you sure you want to delete this journal? This action cannot be undone."
+      )
+    ) {
       return;
     }
-    
+
     try {
       setDeleting(true);
       const response = await fetch(`/api/journals/${id}`, {
-        method: 'DELETE',
+        method: "DELETE",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
-        credentials: 'include',
+        credentials: "include",
       });
 
       const data: ApiResponse = await response.json();
-      
+
       if (data.success) {
-        router.push('/journals');
+        router.push("/journals");
       } else {
-        setError(data.error?.message || data.message || 'Failed to delete journal');
+        setError(
+          data.error?.message || data.message || "Failed to delete journal"
+        );
       }
     } catch (err) {
-      setError('Network error occurred while deleting journal');
-      console.error('Error deleting journal:', err);
+      setError("Network error occurred while deleting journal");
+      console.error("Error deleting journal:", err);
     } finally {
       setDeleting(false);
     }
@@ -188,69 +236,205 @@ export default function JournalDetailPage() {
 
   const handleFileUpload = async () => {
     if (!uploadFile || !id) return;
-    
+
     try {
       setUploading(true);
       const formData = new FormData();
-      formData.append('file', uploadFile);
-      formData.append('journalId', id);
-      
-      const response = await fetch('/api/records', {
-        method: 'POST',
-        credentials: 'include',
+      formData.append("file", uploadFile);
+      formData.append("journalId", id);
+
+      const response = await fetch("/api/records", {
+        method: "POST",
+        credentials: "include",
         body: formData,
       });
 
       const data: ApiResponse = await response.json();
-      
+
       if (data.success) {
         setShowUploadDialog(false);
         setUploadFile(null);
         await fetchJournal();
       } else {
-        setError(data.error?.message || data.message || 'Failed to upload entry');
+        setError(
+          data.error?.message || data.message || "Failed to upload entry"
+        );
       }
     } catch (err) {
-      setError('Network error occurred while uploading entry');
-      console.error('Error uploading entry:', err);
+      setError("Network error occurred while uploading entry");
+      console.error("Error uploading entry:", err);
     } finally {
       setUploading(false);
     }
   };
 
-  const toggleAudio = (entryId: string, audioUrl: string) => {
-    if (playingAudio === entryId) {
-      audioRefs.current[entryId]?.pause();
-      setPlayingAudio(null);
-    } else {
-      Object.values(audioRefs.current).forEach(audio => audio?.pause());
-      setPlayingAudio(entryId);
-      
-      if (!audioRefs.current[entryId]) {
-        audioRefs.current[entryId] = new Audio(audioUrl);
-        audioRefs.current[entryId].addEventListener('ended', () => {
-          setPlayingAudio(null);
-        });
+  const handleExportPDF = async (text: string) => {
+    setIsExportingPDF(true);
+
+    try {
+      const response = await fetch("http://localhost:3000/api/export-pdf", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({ text }),
+      });
+
+      if (!response.ok) {
+        throw new Error("PDF export API request failed");
       }
-      
-      audioRefs.current[entryId]?.play();
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.style.display = "none";
+      a.href = url;
+      a.download = "journal-transcription.pdf";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("PDF export failed:", error);
+      alert(
+        `PDF export failed: ${
+          error instanceof Error ? error.message : String(error)
+        }. Please try again.`
+      );
+    } finally {
+      setIsExportingPDF(false);
     }
   };
 
-  const formatDuration = (seconds?: number) => {
-    if (!seconds) return '0:00';
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  const handleTranscribe = async (audioUrl: string) => {
+    setIsTranscribing(true);
+
+    try {
+      const transcriptionResponse = await fetch("http://localhost:3000/api/transcribe",{
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            s3Url: audioUrl,
+          }),
+        }
+      );
+
+      if (!transcriptionResponse.ok) {
+        const errorData = await transcriptionResponse.json();
+        throw new Error(
+          errorData.message || "Transcription API request failed"
+        );
+      }
+
+      const transcriptionData = await transcriptionResponse.json();
+
+      setTranscriptionDialog({
+        open: true,
+        data: transcriptionData,
+      });
+    } catch (error) {
+      console.error("Transcription failed:", error);
+      alert(
+        `Transcription failed: ${
+          error instanceof Error ? error.message : String(error)
+        }. Please try again.`
+      );
+    } finally {
+      setIsTranscribing(false);
+    }
+  };
+  const getSentimentIcon = (sentiment: string) => {
+    const icons = {
+      joy: "😊",
+      sadness: "😢",
+      anger: "😠",
+      fear: "😨",
+      surprise: "😲",
+      disgust: "🤢",
+      neutral: "😐",
+    };
+    return icons[sentiment as keyof typeof icons] || "😐";
   };
 
-  const getSentimentIcon = (sentiment?: any) => {
-    if (!sentiment) return <Meh className="w-4 h-4 text-gray-400" />;
-    
-    const score = sentiment.score || sentiment.compound || 0;
-    if (score > 0.1) return <Heart className="w-4 h-4 text-green-400" />;
-    if (score < -0.1) return <Frown className="w-4 h-4 text-red-400" />;
-    return <Meh className="w-4 h-4 text-yellow-400" />;
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  // Audio event listeners
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const updateTime = () => setCurrentTime(audio.currentTime);
+    const updateDuration = () => setDuration(audio.duration);
+    const handleEnded = () => setPlayingAudio(null);
+
+    audio.addEventListener("timeupdate", updateTime);
+    audio.addEventListener("loadedmetadata", updateDuration);
+    audio.addEventListener("ended", handleEnded);
+
+    return () => {
+      audio.removeEventListener("timeupdate", updateTime);
+      audio.removeEventListener("loadedmetadata", updateDuration);
+      audio.removeEventListener("ended", handleEnded);
+    };
+  }, [playingAudio]);
+
+  const toggleAudio = (entryId: string, audioUrl: string) => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    if (playingAudio === entryId) {
+      audio.pause();
+      setPlayingAudio(null);
+    } else {
+      if (playingAudio !== null) {
+        audio.pause();
+      }
+      audio.src = audioUrl;
+      audio.volume = volume;
+      audio.play();
+      setPlayingAudio(entryId);
+    }
+  };
+
+  const handleProgressClick = (e: React.MouseEvent) => {
+    const audio = audioRef.current;
+    if (!audio || !duration || !progressRef.current) return;
+
+    const rect = progressRef.current.getBoundingClientRect();
+    const percent = (e.clientX - rect.left) / rect.width;
+    const newTime = percent * duration;
+
+    audio.currentTime = newTime;
+    setCurrentTime(newTime);
+  };
+
+  const skipBackward = () => {
+    const audio = audioRef.current;
+    if (audio) {
+      audio.currentTime = Math.max(0, audio.currentTime - 10);
+    }
+  };
+
+  const skipForward = () => {
+    const audio = audioRef.current;
+    if (audio) {
+      audio.currentTime = Math.min(duration, audio.currentTime + 10);
+    }
+  };
+
+  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newVolume = parseFloat(e.target.value);
+    setVolume(newVolume);
+    if (audioRef.current) {
+      audioRef.current.volume = newVolume;
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -258,7 +442,7 @@ export default function JournalDetailPage() {
     const now = new Date();
     const diffTime = Math.abs(now.getTime() - date.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
+
     if (diffDays === 0) return "Today";
     if (diffDays === 1) return "Yesterday";
     if (diffDays < 7) return `${diffDays} days ago`;
@@ -285,7 +469,9 @@ export default function JournalDetailPage() {
                 left: `${orb.x}%`,
                 top: `${orb.y}%`,
                 transform: "translate(-50%, -50%)",
-                animation: `float-smooth ${15 + index * 5}s ease-in-out infinite`,
+                animation: `float-smooth ${
+                  15 + index * 5
+                }s ease-in-out infinite`,
                 animationDelay: `${index * 3}s`,
               }}
             />
@@ -312,7 +498,9 @@ export default function JournalDetailPage() {
                 left: `${orb.x}%`,
                 top: `${orb.y}%`,
                 transform: "translate(-50%, -50%)",
-                animation: `float-smooth ${15 + index * 5}s ease-in-out infinite`,
+                animation: `float-smooth ${
+                  15 + index * 5
+                }s ease-in-out infinite`,
                 animationDelay: `${index * 3}s`,
               }}
             />
@@ -321,7 +509,9 @@ export default function JournalDetailPage() {
         <div className="relative z-10 px-4 sm:px-6 py-8">
           <div className="max-w-4xl mx-auto">
             <div className="bg-red-900/50 backdrop-blur-sm border border-red-500/60 rounded-2xl p-8 text-center">
-              <h2 className="text-2xl font-semibold text-red-200 mb-4">Error</h2>
+              <h2 className="text-2xl font-semibold text-red-200 mb-4">
+                Error
+              </h2>
               <p className="text-red-300 mb-6">{error}</p>
               <button
                 onClick={fetchJournal}
@@ -350,7 +540,9 @@ export default function JournalDetailPage() {
                 left: `${orb.x}%`,
                 top: `${orb.y}%`,
                 transform: "translate(-50%, -50%)",
-                animation: `float-smooth ${15 + index * 5}s ease-in-out infinite`,
+                animation: `float-smooth ${
+                  15 + index * 5
+                }s ease-in-out infinite`,
                 animationDelay: `${index * 3}s`,
               }}
             />
@@ -359,8 +551,12 @@ export default function JournalDetailPage() {
         <div className="relative z-10 px-4 sm:px-6 py-8">
           <div className="max-w-4xl mx-auto">
             <div className="bg-yellow-900/50 backdrop-blur-sm border border-yellow-500/60 rounded-2xl p-8 text-center">
-              <h2 className="text-2xl font-semibold text-yellow-200">Journal Not Found</h2>
-              <p className="text-yellow-300 mt-4">The requested journal could not be found.</p>
+              <h2 className="text-2xl font-semibold text-yellow-200">
+                Journal Not Found
+              </h2>
+              <p className="text-yellow-300 mt-4">
+                The requested journal could not be found.
+              </p>
             </div>
           </div>
         </div>
@@ -370,6 +566,8 @@ export default function JournalDetailPage() {
 
   return (
     <div className="min-h-screen relative overflow-hidden bg-black">
+      <audio ref={audioRef} />
+
       <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-black to-purple-900/60">
         {gradientOrbs.map((orb, index) => (
           <div
@@ -401,8 +599,8 @@ export default function JournalDetailPage() {
       <div className="relative z-10 px-4 sm:px-6 py-4 sm:py-6">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3 sm:gap-4">
-            <button 
-              onClick={() => router.push('/journals')}
+            <button
+              onClick={() => router.push("/journals")}
               className="p-2 text-gray-400 hover:text-white transition-colors"
             >
               <ArrowLeft className="w-5 h-5" />
@@ -440,21 +638,26 @@ export default function JournalDetailPage() {
               <div className="flex items-center gap-3">
                 <Calendar className="w-5 h-5 text-purple-400" />
                 <span className="text-sm text-gray-400">
-                  Created {formatDate(journal.createdAt)} • Updated {formatDate(journal.updatedAt)}
+                  Created {formatDate(journal.createdAt)} • Updated{" "}
+                  {formatDate(journal.updatedAt)}
                 </span>
               </div>
               <div className="flex gap-2">
                 <button
                   onClick={() => setIsEditing(!isEditing)}
                   className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all duration-300 hover:scale-105 shadow-lg ${
-                    isEditing 
-                      ? 'bg-gray-600 text-white hover:bg-gray-700 hover:shadow-gray-500/25' 
-                      : 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-blue-500/25'
+                    isEditing
+                      ? "bg-gray-600 text-white hover:bg-gray-700 hover:shadow-gray-500/25"
+                      : "bg-blue-600 text-white hover:bg-blue-700 hover:shadow-blue-500/25"
                   }`}
                   disabled={updating}
                 >
-                  {isEditing ? <X className="w-4 h-4" /> : <Edit3 className="w-4 h-4" />}
-                  {isEditing ? 'Cancel' : 'Edit'}
+                  {isEditing ? (
+                    <X className="w-4 h-4" />
+                  ) : (
+                    <Edit3 className="w-4 h-4" />
+                  )}
+                  {isEditing ? "Cancel" : "Edit"}
                 </button>
                 <button
                   onClick={handleDelete}
@@ -462,7 +665,7 @@ export default function JournalDetailPage() {
                   disabled={deleting}
                 >
                   <Trash2 className="w-4 h-4" />
-                  {deleting ? 'Deleting...' : 'Delete'}
+                  {deleting ? "Deleting..." : "Delete"}
                 </button>
               </div>
             </div>
@@ -500,7 +703,7 @@ export default function JournalDetailPage() {
                     disabled={updating}
                   >
                     <Save className="w-4 h-4" />
-                    {updating ? 'Saving...' : 'Save Changes'}
+                    {updating ? "Saving..." : "Save Changes"}
                   </button>
                   <button
                     onClick={() => setIsEditing(false)}
@@ -512,7 +715,9 @@ export default function JournalDetailPage() {
               </div>
             ) : (
               <div>
-                <h2 className="text-2xl sm:text-3xl font-bold text-white mb-6">{journal.title}</h2>
+                <h2 className="text-2xl sm:text-3xl font-bold text-white mb-6">
+                  {journal.title}
+                </h2>
                 {journal.content && (
                   <div className="text-gray-300 whitespace-pre-wrap leading-relaxed mb-4 text-base sm:text-lg">
                     {journal.content}
@@ -527,7 +732,7 @@ export default function JournalDetailPage() {
               <h3 className="text-xl sm:text-2xl font-semibold bg-gradient-to-r from-white to-purple-200 bg-clip-text text-transparent">
                 Audio Entries ({journal?.entries?.length || 0})
               </h3>
-              <button 
+              <button
                 onClick={() => setShowUploadDialog(true)}
                 className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-4 py-2 rounded-xl hover:from-purple-700 hover:to-indigo-700 transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-purple-500/25"
               >
@@ -539,18 +744,27 @@ export default function JournalDetailPage() {
             {!journal?.entries?.length ? (
               <div className="text-center py-16">
                 <FileAudio className="w-16 h-16 text-gray-600 mx-auto mb-6" />
-                <h4 className="text-xl font-semibold text-gray-400 mb-3">No audio entries yet</h4>
-                <p className="text-gray-500">Start by adding your first audio entry to this journal.</p>
+                <h4 className="text-xl font-semibold text-gray-400 mb-3">
+                  No audio entries yet
+                </h4>
+                <p className="text-gray-500">
+                  Start by adding your first audio entry to this journal.
+                </p>
               </div>
             ) : (
               <div className="space-y-6">
                 {journal.entries.map((entry) => (
-                  <div key={entry.id} className="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-600/60 p-6 hover:border-purple-500/60 transition-all duration-300">
+                  <div
+                    key={entry.id}
+                    className="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-600/60 p-6 hover:border-purple-500/60 transition-all duration-300"
+                  >
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-3">
                           <button
-                            onClick={() => toggleAudio(entry.id, entry.audioUrl)}
+                            onClick={() =>
+                              toggleAudio(entry.id, entry.audioUrl)
+                            }
                             className="flex items-center justify-center w-12 h-12 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-full hover:from-purple-700 hover:to-indigo-700 transition-all duration-300 hover:scale-105 shadow-lg"
                           >
                             {playingAudio === entry.id ? (
@@ -559,70 +773,169 @@ export default function JournalDetailPage() {
                               <Play className="w-5 h-5 text-white ml-0.5" />
                             )}
                           </button>
+
                           <div className="flex-1">
                             <div className="flex items-center gap-3 mb-1">
                               <Volume2 className="w-4 h-4 text-purple-400" />
-                              <span className="text-sm font-medium text-white">Audio Entry</span>
+                              <span className="text-sm font-medium text-white">
+                                Audio Entry
+                              </span>
                               {entry.duration && (
                                 <div className="flex items-center gap-1 text-xs text-gray-400">
                                   <Clock className="w-3 h-3" />
-                                  {formatDuration(entry.duration)}
+                                  {formatTime(entry.duration)}
                                 </div>
                               )}
-                            </div>
-                            <div className="flex items-center gap-4 text-xs text-gray-400">
-                              <div className="flex items-center gap-1">
-                                <Calendar className="w-3 h-3" />
-                                {new Date(entry.createdAt).toLocaleDateString()} at {new Date(entry.createdAt).toLocaleTimeString()}
-                              </div>
-                              <div className="flex items-center gap-1">
-                                {entry.isPrivate ? <Lock className="w-3 h-3" /> : <Globe className="w-3 h-3" />}
-                                {entry.isPrivate ? 'Private' : 'Public'}
-                              </div>
                               {entry.language && (
-                                <div className="flex items-center gap-1">
+                                <div className="flex items-center gap-1 text-xs text-gray-400">
                                   <Languages className="w-3 h-3" />
                                   {entry.language.toUpperCase()}
                                 </div>
                               )}
-                              <div className="flex items-center gap-1">
-                                {getSentimentIcon(entry.sentiment)}
-                                Sentiment
+                              <div className="flex items-center gap-1 text-xs text-gray-400">
+                                {entry.isPrivate ? (
+                                  <Lock className="w-3 h-3" />
+                                ) : (
+                                  <Globe className="w-3 h-3" />
+                                )}
+                                {entry.isPrivate ? "Private" : "Public"}
                               </div>
                             </div>
+                            <p className="text-xs text-gray-500">
+                              {formatDate(entry.createdAt)}
+                            </p>
                           </div>
                         </div>
-                        
-                        {entry.transcript && (
-                          <div className="bg-gray-700/30 rounded-lg p-4 mt-4">
-                            <h5 className="text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
-                              <FileText className="w-4 h-4" />
-                              Transcript
-                            </h5>
-                            <p className="text-gray-200 text-sm leading-relaxed">
-                              {entry.transcript}
-                            </p>
+
+                        {/* Audio Progress Bar */}
+                        {playingAudio === entry.id && (
+                          <div className="bg-gray-700/50 rounded-lg p-4 mt-4">
+                            <div className="flex items-center gap-4 mb-3">
+                              <button
+                                onClick={skipBackward}
+                                className="p-2 text-gray-400 hover:text-white transition-colors"
+                              >
+                                <div className="w-4 h-4 relative">
+                                  <div className="absolute inset-0 flex items-center justify-center text-xs font-bold">
+                                    ⏪
+                                  </div>
+                                </div>
+                              </button>
+
+                              <div className="flex-1">
+                                <div
+                                  ref={progressRef}
+                                  className="w-full h-2 bg-gray-600 rounded-full cursor-pointer relative"
+                                  onClick={handleProgressClick}
+                                >
+                                  <div
+                                    className="h-full bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full transition-all duration-100"
+                                    style={{
+                                      width: `${
+                                        (currentTime / duration) * 100
+                                      }%`,
+                                    }}
+                                  />
+                                </div>
+                                <div className="flex justify-between text-xs text-gray-400 mt-1">
+                                  <span>{formatTime(currentTime)}</span>
+                                  <span>{formatTime(duration)}</span>
+                                </div>
+                              </div>
+
+                              <button
+                                onClick={skipForward}
+                                className="p-2 text-gray-400 hover:text-white transition-colors"
+                              >
+                                <div className="w-4 h-4 relative">
+                                  <div className="absolute inset-0 flex items-center justify-center text-xs font-bold">
+                                    ⏩
+                                  </div>
+                                </div>
+                              </button>
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                              <Volume2 className="w-4 h-4 text-gray-400" />
+                              <input
+                                type="range"
+                                min="0"
+                                max="1"
+                                step="0.1"
+                                value={volume}
+                                onChange={handleVolumeChange}
+                                className="flex-1 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer"
+                                style={{
+                                  background: `linear-gradient(to right, rgb(147, 51, 234) 0%, rgb(147, 51, 234) ${
+                                    volume * 100
+                                  }%, rgb(75, 85, 99) ${
+                                    volume * 100
+                                  }%, rgb(75, 85, 99) 100%)`,
+                                }}
+                              />
+                              <span className="text-xs text-gray-400 w-8">
+                                {Math.round(volume * 100)}%
+                              </span>
+                            </div>
                           </div>
                         )}
                       </div>
-                      
-                      <div className="flex gap-2 ml-4">
+
+                      <div className="flex items-center gap-2 ml-4">
+                        <button
+                          onClick={() =>
+                            handleTranscribe(entry.audioUrl)
+                          }
+                          disabled={isTranscribing}
+                          className="flex items-center gap-2 bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-blue-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {isTranscribing ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <MessageSquare className="w-4 h-4" />
+                          )}
+                          <span className="text-sm">
+                            {isTranscribing ? "Transcribing..." : "Transcribe"}
+                          </span>
+                        </button>
+
                         <a
                           href={entry.audioUrl}
                           download
-                          className="p-2 text-green-400 hover:text-green-300 hover:bg-green-900/30 rounded-lg transition-all"
-                          title="Download"
+                          className="flex items-center gap-2 bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-green-500/25"
                         >
                           <Download className="w-4 h-4" />
+                          <span className="text-sm">Download</span>
                         </a>
-                        <button className="p-2 text-gray-400 hover:text-white hover:bg-gray-700/50 rounded-lg transition-all">
-                          <Edit3 className="w-4 h-4" />
-                        </button>
-                        <button className="p-2 text-red-400 hover:text-red-300 hover:bg-red-900/30 rounded-lg transition-all">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
                       </div>
                     </div>
+
+                    {entry.transcript && (
+                      <div className="bg-gray-700/30 rounded-lg p-4 mt-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <FileText className="w-4 h-4 text-purple-400" />
+                          <span className="text-sm font-medium text-white">
+                            Transcript
+                          </span>
+                          {entry.sentiment && (
+                            <div className="flex items-center gap-1 ml-auto">
+                              <span className="text-sm text-gray-400">
+                                Sentiment:
+                              </span>
+                              <span className="text-lg">
+                                {getSentimentIcon(entry.sentiment.label)}
+                              </span>
+                              <span className="text-sm text-gray-300 capitalize">
+                                {entry.sentiment.label}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                        <p className="text-gray-300 text-sm leading-relaxed">
+                          {entry.transcript}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -631,44 +944,29 @@ export default function JournalDetailPage() {
         </div>
       </div>
 
-      {showUploadDialog && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-900 border border-gray-700 rounded-2xl max-w-md w-full p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-semibold text-white">Upload Audio Entry</h3>
-              <button
-                onClick={() => setShowUploadDialog(false)}
-                className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            
-            <div className="space-y-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-3">
-                  Select Audio File
-                </label>
-                <div
-                  className="border-2 border-dashed border-gray-600 rounded-xl p-8 text-center cursor-pointer hover:border-purple-500 transition-all duration-300"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  {uploadFile ? (
-                    <div className="flex items-center justify-center gap-3">
-                      <FileAudio className="w-8 h-8 text-purple-400" />
-                      <div>
-                        <p className="text-white font-medium">{uploadFile.name}</p>
-                        <p className="text-sm text-gray-400">{(uploadFile.size / 1024 / 1024).toFixed(2)} MB</p>
-                      </div>
-                    </div>
-                  ) : (
-                    <div>
-                      <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                      <p className="text-white font-medium mb-2">Choose an audio file</p>
-                      <p className="text-sm text-gray-400">MP3, WAV, M4A up to 50MB</p>
-                    </div>
-                  )}
-                </div>
+      <Dialog
+        open={showUploadDialog}
+        onClose={() => setShowUploadDialog(false)}
+      >
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-xl font-semibold text-white">
+              Add Audio Entry
+            </h3>
+            <button
+              onClick={() => setShowUploadDialog(false)}
+              className="p-2 text-gray-400 hover:text-white transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          <div className="space-y-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Select Audio File
+              </label>
+              <div className="border-2 border-dashed border-gray-600 rounded-xl p-8 text-center hover:border-purple-500 transition-colors">
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -676,36 +974,201 @@ export default function JournalDetailPage() {
                   onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
                   className="hidden"
                 />
-              </div>
-
-              <div className="flex gap-3">
+                <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-300 mb-2">
+                  {uploadFile ? uploadFile.name : "Drop your audio file here"}
+                </p>
+                <p className="text-sm text-gray-500 mb-4">
+                  Supports MP3, WAV, M4A, and other audio formats
+                </p>
                 <button
-                  onClick={handleFileUpload}
-                  disabled={!uploadFile || uploading}
-                  className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-3 px-4 rounded-xl hover:from-purple-700 hover:to-indigo-700 transition-all duration-300 hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition-colors"
                 >
-                  {uploading ? 'Uploading...' : 'Upload Entry'}
-                </button>
-                <button
-                  onClick={() => {
-                    setShowUploadDialog(false);
-                    setUploadFile(null);
-                  }}
-                  className="bg-gray-700 text-white py-3 px-4 rounded-xl hover:bg-gray-600 transition-all duration-300"
-                >
-                  Cancel
+                  Choose File
                 </button>
               </div>
             </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={handleFileUpload}
+                disabled={!uploadFile || uploading}
+                className="flex items-center gap-2 bg-green-600 text-white px-6 py-3 rounded-xl hover:bg-green-700 transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-green-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {uploading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Upload className="w-4 h-4" />
+                )}
+                {uploading ? "Uploading..." : "Upload Entry"}
+              </button>
+              <button
+                onClick={() => {
+                  setShowUploadDialog(false);
+                  setUploadFile(null);
+                }}
+                className="bg-gray-700 text-white px-6 py-3 rounded-xl hover:bg-gray-600 transition-all duration-300 hover:scale-105 shadow-lg"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
-      )}
+      </Dialog>
+
+      <Dialog
+        open={transcriptionDialog.open}
+        onClose={() => setTranscriptionDialog({ open: false, data: null })}
+      >
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-xl font-semibold text-white">
+              Transcription Results
+            </h3>
+            <button
+              onClick={() =>
+                setTranscriptionDialog({ open: false, data: null })
+              }
+              className="p-2 text-gray-400 hover:text-white transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {transcriptionDialog.data && (
+            <div className="space-y-6">
+              <div className="bg-gray-800/50 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <FileText className="w-5 h-5 text-purple-400" />
+                  <span className="text-sm font-medium text-white">
+                    Transcription
+                  </span>
+                  {transcriptionDialog.data.language && (
+                    <div className="flex items-center gap-1 ml-auto">
+                      <Languages className="w-4 h-4 text-gray-400" />
+                      <span className="text-sm text-gray-300">
+                        {transcriptionDialog.data.language}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <p className="text-gray-300 leading-relaxed">
+                  {transcriptionDialog.data.text}
+                </p>
+              </div>
+
+              {transcriptionDialog.data.sentiment && (
+                <div className="bg-gray-800/50 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="text-2xl">
+                      {getSentimentIcon(
+                        transcriptionDialog.data.sentiment.label
+                      )}
+                    </div>
+                    <span className="text-sm font-medium text-white">
+                      Sentiment Analysis
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <span className="text-gray-300 capitalize">
+                      {transcriptionDialog.data.sentiment.label}
+                    </span>
+                    <div className="flex-1 bg-gray-700 rounded-full h-2">
+                      <div
+                        className="bg-gradient-to-r from-purple-500 to-indigo-500 h-2 rounded-full transition-all duration-500"
+                        style={{
+                          width: `${
+                            transcriptionDialog.data.sentiment.score * 100
+                          }%`,
+                        }}
+                      />
+                    </div>
+                    <span className="text-sm text-gray-400">
+                      {Math.round(
+                        transcriptionDialog.data.sentiment.score * 100
+                      )}
+                      %
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => handleExportPDF(transcriptionDialog.data.text)}
+                  disabled={isExportingPDF}
+                  className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-xl hover:bg-blue-700 transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-blue-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isExportingPDF ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <FileOutput className="w-4 h-4" />
+                  )}
+                  {isExportingPDF ? "Exporting..." : "Export PDF"}
+                </button>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(
+                      transcriptionDialog.data.text
+                    );
+                    toast("Text copied", {
+                      position: "top-right",
+                      duration: 3000,
+                      icon: <LoaderCircle className="animate-spin h-4 w-4" />,
+                      style: {
+                        background: '#1a1a1a',
+                        color: '#ffffff',
+                        border: '1px solid #7c3aed'
+                      }
+                    })
+                  }}
+                  className="bg-gray-600 text-white px-6 py-3 rounded-xl hover:bg-gray-700 transition-all duration-300 hover:scale-105 shadow-lg"
+                >
+                  Copy Text
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </Dialog>
 
       <style jsx>{`
+        input[type="range"]::-webkit-slider-thumb {
+          appearance: none;
+          width: 16px;
+          height: 16px;
+          border-radius: 50%;
+          background: #8b5cf6;
+          cursor: pointer;
+          border: 2px solid #fff;
+          box-shadow: 0 0 0 1px #8b5cf6;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+          width: 16px;
+          height: 16px;
+          border-radius: 50%;
+          background: #8b5cf6;
+          cursor: pointer;
+          border: 2px solid #fff;
+          box-shadow: 0 0 0 1px #8b5cf6;
+        }
+
         @keyframes float-smooth {
-          0%, 100% { transform: translate(-50%, -50%) translateY(0px) rotate(0deg); }
-          33% { transform: translate(-50%, -50%) translateY(-30px) rotate(120deg); }
-          66% { transform: translate(-50%, -50%) translateY(-10px) rotate(240deg); }
+          0%,
+          100% {
+            transform: translate(-50%, -50%) translateY(0px) rotate(0deg);
+          }
+          25% {
+            transform: translate(-50%, -50%) translateY(-10px) rotate(1deg);
+          }
+          50% {
+            transform: translate(-50%, -50%) translateY(-5px) rotate(0deg);
+          }
+          75% {
+            transform: translate(-50%, -50%) translateY(-15px) rotate(-1deg);
+          }
         }
       `}</style>
     </div>
