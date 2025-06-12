@@ -346,6 +346,7 @@ export default function JournalDetailPage() {
       setIsTranscribing(false);
     }
   };
+
   const getSentimentIcon = (sentiment: string) => {
     const icons = {
       joy: "😊",
@@ -365,7 +366,6 @@ export default function JournalDetailPage() {
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
-  // Audio event listeners
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -600,7 +600,7 @@ export default function JournalDetailPage() {
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3 sm:gap-4">
             <button
-              onClick={() => router.push("/journals")}
+              onClick={() => router.push("/journal")}
               className="p-2 text-gray-400 hover:text-white transition-colors"
             >
               <ArrowLeft className="w-5 h-5" />
@@ -807,7 +807,6 @@ export default function JournalDetailPage() {
                           </div>
                         </div>
 
-                        {/* Audio Progress Bar */}
                         {playingAudio === entry.id && (
                           <div className="bg-gray-700/50 rounded-lg p-4 mt-4">
                             <div className="flex items-center gap-4 mb-3">
@@ -882,22 +881,39 @@ export default function JournalDetailPage() {
                       </div>
 
                       <div className="flex items-center gap-2 ml-4">
-                        <button
-                          onClick={() =>
-                            handleTranscribe(entry.audioUrl)
-                          }
-                          disabled={isTranscribing}
-                          className="flex items-center gap-2 bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-blue-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {isTranscribing ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : (
+                        {entry.transcript ? (
+                          <button
+                            onClick={() => {
+                              setTranscriptionDialog({
+                                open: true,
+                                data: {
+                                  text: entry.transcript,
+                                  language: entry.language,
+                                  sentiment: entry.sentiment,
+                                },
+                              });
+                            }}
+                            className="flex items-center gap-2 bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-blue-500/25"
+                          >
                             <MessageSquare className="w-4 h-4" />
-                          )}
-                          <span className="text-sm">
-                            {isTranscribing ? "Transcribing..." : "Transcribe"}
-                          </span>
-                        </button>
+                            <span className="text-sm">View Transcript</span>
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleTranscribe(entry.audioUrl)}
+                            disabled={isTranscribing}
+                            className="flex items-center gap-2 bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-blue-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {isTranscribing ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <MessageSquare className="w-4 h-4" />
+                            )}
+                            <span className="text-sm">
+                              {isTranscribing ? "Transcribing..." : "Transcribe"}
+                            </span>
+                          </button>
+                        )}
 
                         <a
                           href={entry.audioUrl}
@@ -909,33 +925,6 @@ export default function JournalDetailPage() {
                         </a>
                       </div>
                     </div>
-
-                    {entry.transcript && (
-                      <div className="bg-gray-700/30 rounded-lg p-4 mt-4">
-                        <div className="flex items-center gap-2 mb-2">
-                          <FileText className="w-4 h-4 text-purple-400" />
-                          <span className="text-sm font-medium text-white">
-                            Transcript
-                          </span>
-                          {entry.sentiment && (
-                            <div className="flex items-center gap-1 ml-auto">
-                              <span className="text-sm text-gray-400">
-                                Sentiment:
-                              </span>
-                              <span className="text-lg">
-                                {getSentimentIcon(entry.sentiment.label)}
-                              </span>
-                              <span className="text-sm text-gray-300 capitalize">
-                                {entry.sentiment.label}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                        <p className="text-gray-300 text-sm leading-relaxed">
-                          {entry.transcript}
-                        </p>
-                      </div>
-                    )}
                   </div>
                 ))}
               </div>

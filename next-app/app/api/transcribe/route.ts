@@ -5,7 +5,9 @@ import { pipeline } from "stream/promises";
 import { v4 as uuidv4 } from "uuid";
 import fetch from "node-fetch";
 import { HttpStatus } from "@/lib/http-status";
+import { PrismaClient } from "@/app/generated/prisma";
 
+const prisma = new PrismaClient();
 const s3 = new S3Client({ region: process.env.BUCKET_REGION });
 
 function parseS3Url(url: string) {
@@ -69,7 +71,25 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const result = await fastApiResponse.json();
+    const result = await fastApiResponse.json() as { 
+      text: string, 
+      top_emotion: { 
+        label: string, 
+        score: number 
+      } 
+    };
+    
+    await prisma.entry.updateMany({
+      where: {
+        audioUrl: s3Url
+      },
+      data: {
+        transcript: result.text,
+        sentiment: result.top_emotion,
+      }
+      }
+    )
+
     return NextResponse.json(result);
   } catch (err: unknown) {
     console.error("Error:", err);
