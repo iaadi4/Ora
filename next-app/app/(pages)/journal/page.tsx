@@ -14,6 +14,7 @@ import {
   MoreVertical,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { authClient } from "@/lib/auth-client";
 
 interface Journal {
   id: string;
@@ -33,12 +34,45 @@ const AllJournalsPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [sortBy, setSortBy] = useState<"updated" | "created" | "title">("updated");
+  const [authState, setAuthState] = useState<'loading' | 'authenticated' | 'unauthenticated'>('loading');
   
   const router = useRouter();
 
+  const { data, isPending, error } = authClient.useSession();
   useEffect(() => {
-    fetchAllJournals();
-  }, []);
+    const checkAuthState = () => {
+      if (isPending) {
+        setAuthState('loading');
+        return;
+      }
+      if (error) {
+        console.error('Auth error:', error);
+        setAuthState('unauthenticated');
+        return;
+      }
+      if (data?.session && data?.user) {
+        setAuthState('authenticated');
+      } else {
+        setAuthState('unauthenticated');
+      }
+    };
+    checkAuthState();
+  }, [data, isPending, error]);
+
+  useEffect(() => {
+    if (authState === 'unauthenticated') {
+      const timer = setTimeout(() => {
+        router.push('/login');
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [authState, router]);
+
+  useEffect(() => {
+    if(authState == 'authenticated') {
+      fetchAllJournals();
+    }
+  }, [authState]);
 
   const fetchAllJournals = async () => {
     setLoading(true);

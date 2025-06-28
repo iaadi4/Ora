@@ -31,6 +31,7 @@ import {
   LoaderCircle,
 } from "lucide-react";
 import { toast } from "sonner";
+import { authClient } from "@/lib/auth-client";
 
 interface Entry {
   id: string;
@@ -107,7 +108,7 @@ export default function JournalDetailPage() {
 
   const [journal, setJournal] = useState<Journal | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [newError, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState("");
   const [editContent, setEditContent] = useState("");
@@ -125,8 +126,28 @@ export default function JournalDetailPage() {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(1);
+  const [authState, setAuthState] = useState<'loading' | 'authenticated' | 'unauthenticated'>('loading');
 
-  console.log(journal);
+  const { data, isPending, error } = authClient.useSession();
+  useEffect(() => {
+    const checkAuthState = () => {
+      if (isPending) {
+        setAuthState('loading');
+        return;
+      }
+      if (error) {
+        console.error('Auth error:', error);
+        setAuthState('unauthenticated');
+        return;
+      }
+      if (data?.session && data?.user) {
+        setAuthState('authenticated');
+      } else {
+        setAuthState('unauthenticated');
+      }
+    };
+    checkAuthState();
+  }, [data, isPending, error]);
 
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [isExportingPDF, setIsExportingPDF] = useState(false);
@@ -471,8 +492,10 @@ export default function JournalDetailPage() {
   }
 
   useEffect(() => {
-    fetchJournal();
-  }, [id, fetchJournal]);
+    if(authState == 'authenticated') {
+      fetchJournal();
+    }
+  }, [id, fetchJournal, authState]);
 
   if (loading) {
     return (
@@ -503,7 +526,7 @@ export default function JournalDetailPage() {
     );
   }
 
-  if (error) {
+  if (newError) {
     return (
       <div className="min-h-screen relative overflow-hidden bg-black">
         <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-black to-purple-900/60">
@@ -531,7 +554,7 @@ export default function JournalDetailPage() {
               <h2 className="text-2xl font-semibold text-red-200 mb-4">
                 Error
               </h2>
-              <p className="text-red-300 mb-6">{error}</p>
+              <p className="text-red-300 mb-6">{newError}</p>
               <button
                 onClick={fetchJournal}
                 className="bg-red-600 text-white px-6 py-3 rounded-xl hover:bg-red-700 transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-red-500/25"
