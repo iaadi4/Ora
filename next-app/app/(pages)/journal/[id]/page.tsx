@@ -497,6 +497,15 @@ export default function JournalDetailPage() {
     }
   }, [id, fetchJournal, authState]);
 
+  const handleLogout = async () => {
+    try {
+      await authClient.signOut();
+    } catch (error) {
+      console.error('Logout error:', error);
+      router.push('/login');
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen relative overflow-hidden bg-black">
@@ -666,7 +675,7 @@ export default function JournalDetailPage() {
             <button className="p-2 text-gray-400 hover:text-white transition-colors">
               <User className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
-            <button className="p-2 text-gray-400 hover:text-white transition-colors">
+            <button onClick={handleLogout} className="p-2 text-gray-400 hover:text-white transition-colors">
               <LogOut className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
           </div>

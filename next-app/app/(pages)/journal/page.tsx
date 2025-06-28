@@ -156,6 +156,15 @@ const AllJournalsPage = () => {
     return gradients[color] || gradients.purple;
   };
 
+  const handleLogout = async () => {
+    try {
+      await authClient.signOut();
+    } catch (error) {
+      console.error('Logout error:', error);
+      router.push('/login');
+    }
+  };
+
   return (
     <div className="min-h-screen relative overflow-hidden bg-black">
       <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-black to-purple-900/60">
@@ -213,7 +222,7 @@ const AllJournalsPage = () => {
             <button className="p-2 text-gray-400 hover:text-white transition-colors">
               <User className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
-            <button className="p-2 text-gray-400 hover:text-white transition-colors">
+            <button onClick={handleLogout} className="p-2 text-gray-400 hover:text-white transition-colors cursor-pointer">
               <LogOut className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
           </div>

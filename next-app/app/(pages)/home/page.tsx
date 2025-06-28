@@ -285,7 +285,7 @@ const JournalHomepage = () => {
             </button>
             <button 
               onClick={handleLogout}
-              className="p-2 text-gray-400 hover:text-white transition-colors"
+              className="p-2 text-gray-400 hover:text-white transition-colors cursor-pointer"
               title="Sign out"
             >
               <LogOut className="w-5 h-5" />
