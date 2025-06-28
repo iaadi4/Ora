@@ -39,7 +39,10 @@ interface Entry {
   updatedAt: string;
   audioUrl: string;
   transcript?: string;
-  sentiment?: any;
+  sentiment?: {
+    label: string;
+    score: number;
+  };
   duration?: number;
   language?: string;
   isPrivate: boolean;
@@ -65,9 +68,18 @@ interface ApiResponse {
   };
 }
 
+interface TranscriptionData {
+  text: string;
+  language?: string;
+  sentiment?: {
+    label: string;
+    score: number;
+  };
+}
+
 interface TranscriptionDialog {
   open: boolean;
-  data: any;
+  data: TranscriptionData | null;
 }
 
 interface DialogProps {
@@ -113,6 +125,8 @@ export default function JournalDetailPage() {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(1);
+
+  console.log(journal);
 
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [isExportingPDF, setIsExportingPDF] = useState(false);
@@ -451,6 +465,11 @@ export default function JournalDetailPage() {
     return `${Math.ceil(diffDays / 365)} years ago`;
   };
 
+  function formatTimestamp(timestamp: string): string {
+    const date = new Date(timestamp);
+    return date.toLocaleString();
+  }
+
   useEffect(() => {
     fetchJournal();
   }, [id, fetchJournal]);
@@ -647,8 +666,8 @@ export default function JournalDetailPage() {
                   onClick={() => setIsEditing(!isEditing)}
                   className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all duration-300 hover:scale-105 shadow-lg ${
                     isEditing
-                      ? "bg-gray-600 text-white hover:bg-gray-700 hover:shadow-gray-500/25"
-                      : "bg-blue-600 text-white hover:bg-blue-700 hover:shadow-blue-500/25"
+                      ? "flex items-center gap-2 bg-gradient-to-r from-purple-700 to-indigo-700 text-white px-4 py-2 rounded-xl hover:from-purple-700 hover:to-indigo-700 transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-purple-500/25"
+                      : "flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-4 py-2 rounded-xl hover:from-purple-700 hover:to-indigo-700 transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-purple-500/25"
                   }`}
                   disabled={updating}
                 >
@@ -661,7 +680,7 @@ export default function JournalDetailPage() {
                 </button>
                 <button
                   onClick={handleDelete}
-                  className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-xl hover:bg-red-700 transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-red-500/25"
+                  className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-4 py-2 rounded-xl hover:from-purple-700 hover:to-indigo-700 transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-purple-500/25"
                   disabled={deleting}
                 >
                   <Trash2 className="w-4 h-4" />
@@ -699,15 +718,14 @@ export default function JournalDetailPage() {
                 <div className="flex gap-3">
                   <button
                     onClick={handleUpdate}
-                    className="flex items-center gap-2 bg-green-600 text-white px-6 py-3 rounded-xl hover:bg-green-700 transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-green-500/25"
-                    disabled={updating}
+                    className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-4 py-2 rounded-xl hover:from-purple-700 hover:to-indigo-700 transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-purple-500/25"
                   >
                     <Save className="w-4 h-4" />
                     {updating ? "Saving..." : "Save Changes"}
                   </button>
                   <button
                     onClick={() => setIsEditing(false)}
-                    className="bg-gray-700 text-white px-6 py-3 rounded-xl hover:bg-gray-600 transition-all duration-300 hover:scale-105 shadow-lg"
+                    className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-4 py-2 rounded-xl hover:from-purple-700 hover:to-indigo-700 transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-purple-500/25"
                   >
                     Cancel
                   </button>
@@ -778,7 +796,7 @@ export default function JournalDetailPage() {
                             <div className="flex items-center gap-3 mb-1">
                               <Volume2 className="w-4 h-4 text-purple-400" />
                               <span className="text-sm font-medium text-white">
-                                Audio Entry
+                                {formatTimestamp(entry.createdAt)}
                               </span>
                               {entry.duration && (
                                 <div className="flex items-center gap-1 text-xs text-gray-400">
@@ -887,7 +905,7 @@ export default function JournalDetailPage() {
                               setTranscriptionDialog({
                                 open: true,
                                 data: {
-                                  text: entry.transcript,
+                                  text: entry.transcript ?? "",
                                   language: entry.language,
                                   sentiment: entry.sentiment,
                                 },
@@ -1085,8 +1103,12 @@ export default function JournalDetailPage() {
 
               <div className="flex gap-3">
                 <button
-                  onClick={() => handleExportPDF(transcriptionDialog.data.text)}
-                  disabled={isExportingPDF}
+                  onClick={() => {
+                    if (transcriptionDialog.data) {
+                      handleExportPDF(transcriptionDialog.data.text);
+                    }
+                  }}
+                  disabled={isExportingPDF || !transcriptionDialog.data}
                   className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-xl hover:bg-blue-700 transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-blue-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isExportingPDF ? (
@@ -1099,7 +1121,7 @@ export default function JournalDetailPage() {
                 <button
                   onClick={() => {
                     navigator.clipboard.writeText(
-                      transcriptionDialog.data.text
+                      transcriptionDialog.data?.text ?? ""
                     );
                     toast("Text copied", {
                       position: "top-right",
