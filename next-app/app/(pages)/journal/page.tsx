@@ -13,6 +13,7 @@ import {
   List,
   MoreVertical,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 interface Journal {
   id: string;
@@ -32,6 +33,8 @@ const AllJournalsPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [sortBy, setSortBy] = useState<"updated" | "created" | "title">("updated");
+  
+  const router = useRouter();
 
   useEffect(() => {
     fetchAllJournals();
@@ -153,7 +156,7 @@ const AllJournalsPage = () => {
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3 sm:gap-4">
             <button 
-              onClick={() => window.history.back()}
+              onClick={() => router.push('/home')}
               className="p-2 text-gray-400 hover:text-white transition-colors"
             >
               <ArrowLeft className="w-5 h-5" />
