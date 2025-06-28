@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -12,6 +12,9 @@ import {
   LogOut,
   ArrowRight,
 } from "lucide-react";
+
+import { authClient } from "@/lib/auth-client"
+import { toast } from "sonner";
 
 interface Journal {
   id: string;
@@ -33,16 +36,55 @@ const JournalHomepage = () => {
   const [loading, setLoading] = useState(false);
   const [createLoading, setCreateLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [authState, setAuthState] = useState<'loading' | 'authenticated' | 'unauthenticated'>('loading');
+
+  const { data, isPending, error } = authClient.useSession();
 
   useEffect(() => {
-    setMounted(true);
-    fetchJournals();
-  }, []);
+    const checkAuthState = () => {
+      if (isPending) {
+        setAuthState('loading');
+        return;
+      }
+      if (error) {
+        console.error('Auth error:', error);
+        setAuthState('unauthenticated');
+        return;
+      }
+      if (data?.session && data?.user) {
+        setAuthState('authenticated');
+      } else {
+        setAuthState('unauthenticated');
+      }
+    };
 
-  const fetchJournals = async () => {
+    checkAuthState();
+  }, [data, isPending, error]);
+
+  useEffect(() => {
+    if (authState === 'unauthenticated') {
+      const timer = setTimeout(() => {
+        router.push('/login');
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [authState, router]);
+
+  const fetchJournals = useCallback(async () => {
+    if (authState !== 'authenticated') return;
+    
     setLoading(true);
     try {
-      const res = await fetch("/api/journals?top=true");
+      const res = await fetch("/api/journals?top=true", {
+        headers: {
+          'Cache-Control': 'no-cache',
+        },
+      });
+      
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+      
       const response = await res.json();
       const journalsData = Array.isArray(response.data) ? response.data : [];
       setJournals(journalsData);
@@ -52,7 +94,14 @@ const JournalHomepage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [authState]);
+
+  useEffect(() => {
+    setMounted(true);
+    if (authState === 'authenticated') {
+      fetchJournals();
+    }
+  }, [authState, fetchJournals]);
 
   useEffect(() => {
     if (!mounted) return;
@@ -72,6 +121,28 @@ const JournalHomepage = () => {
     return () => clearInterval(interval);
   }, [mounted]);
 
+  if (authState === 'loading') {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-400">Checking authentication...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (authState === 'unauthenticated') {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-6 h-6 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+          <p className="text-gray-400 text-sm">Redirecting to login...</p>
+        </div>
+      </div>
+    );
+  }
+
   const gradientOrbs = [
     { size: 400, x: 15, y: 20, colors: "from-purple-600/15 to-indigo-800/20" },
     { size: 300, x: 85, y: 80, colors: "from-violet-500/10 to-purple-700/15" },
@@ -79,42 +150,69 @@ const JournalHomepage = () => {
   ];
 
   const handleCreateJournal = async () => {
-    if (!newJournalTitle.trim() || createLoading) return;
+    if (!newJournalTitle.trim() || createLoading || authState !== 'authenticated') return;
+    
     setCreateLoading(true);
     try {
       const res = await fetch("/api/journals", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: newJournalTitle }),
+        headers: { 
+          "Content-Type": "application/json",
+          'Cache-Control': 'no-cache',
+        },
+        body: JSON.stringify({ title: newJournalTitle.trim() }),
       });
 
-      if (!res.ok) throw new Error("Failed to create journal");
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.message || "Failed to create journal");
+      }
+      
       setNewJournalTitle("");
       setShowCreateModal(false);
       await fetchJournals();
     } catch (error) {
-      console.error(error);
+      console.error("Create journal error:", error);
+      toast.error("Error creating journal");
     } finally {
       setCreateLoading(false);
     }
   };
 
   const handleJournalClick = (journalId: string) => {
-    router.push(`/journal/${journalId}`);
+    if (authState === 'authenticated') {
+      router.push(`/journal/${journalId}`);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await authClient.signOut();
+    } catch (error) {
+      console.error('Logout error:', error);
+      router.push('/login');
+    }
   };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffTime = Math.abs(now.getTime() - date.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    if (diffDays === 0) return "Today";
-    if (diffDays === 1) return "Yesterday";
-    if (diffDays < 7) return `${diffDays} days ago`;
-    if (diffDays < 30) return `${Math.ceil(diffDays / 7)} weeks ago`;
-    if (diffDays < 365) return `${Math.ceil(diffDays / 30)} months ago`;
-    return `${Math.ceil(diffDays / 365)} years ago`;
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return "Unknown date";
+      
+      const now = new Date();
+      const diffTime = Math.abs(now.getTime() - date.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      if (diffDays === 0) return "Today";
+      if (diffDays === 1) return "Yesterday";
+      if (diffDays < 7) return `${diffDays} days ago`;
+      if (diffDays < 30) return `${Math.ceil(diffDays / 7)} weeks ago`;
+      if (diffDays < 365) return `${Math.ceil(diffDays / 30)} months ago`;
+      return `${Math.ceil(diffDays / 365)} years ago`;
+    } catch (error) {
+      console.error('Date formatting error:', error);
+      return "Unknown date";
+    }
   };
 
   const getJournalColor = (index: number) => {
@@ -185,7 +283,11 @@ const JournalHomepage = () => {
             <button className="p-2 text-gray-400 hover:text-white transition-colors">
               <Settings className="w-5 h-5" />
             </button>
-            <button className="p-2 text-gray-400 hover:text-white transition-colors">
+            <button 
+              onClick={handleLogout}
+              className="p-2 text-gray-400 hover:text-white transition-colors"
+              title="Sign out"
+            >
               <LogOut className="w-5 h-5" />
             </button>
           </div>
@@ -196,7 +298,7 @@ const JournalHomepage = () => {
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
-              Welcome back
+              Welcome back{data?.user?.name ? `, ${data.user.name}` : ''}
             </h2>
             <p className="text-xl text-gray-300 mb-8">
               Continue your journaling journey
@@ -266,7 +368,7 @@ const JournalHomepage = () => {
                   <div className="flex items-center gap-4 text-sm text-gray-400 mb-3">
                     <span className="flex items-center gap-1">
                       <Calendar className="w-4 h-4" />
-                      {journal.entryCount}
+                      {journal.entryCount} {journal.entryCount === 1 ? 'entry' : 'entries'}
                     </span>
                   </div>
                   <p className="text-sm text-gray-500">
@@ -283,13 +385,13 @@ const JournalHomepage = () => {
               <BookOpen className="w-16 h-16 text-gray-600 mx-auto mb-4" />
               <h3 className="text-2xl font-semibold text-gray-400 mb-2">No journals yet</h3>
               <p className="text-gray-500 mb-6">Create your first journal to get started</p>
-              <button
-                onClick={() => setShowCreateModal(true)}
-                className="inline-flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-xl font-medium hover:bg-purple-700 transition-colors"
-              >
-                <Plus className="w-5 h-5" />
-                Create Journal
-              </button>
+            </div>
+          )}
+
+          {loading && (
+            <div className="text-center py-16">
+              <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="text-gray-400">Loading journals...</p>
             </div>
           )}
         </div>
@@ -299,7 +401,7 @@ const JournalHomepage = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
             className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-            onClick={() => setShowCreateModal(false)}
+            onClick={() => !createLoading && setShowCreateModal(false)}
           />
           <div className="relative bg-gray-900 rounded-2xl p-8 max-w-md w-full border border-gray-700">
             <h3 className="text-2xl font-bold text-white mb-6">Create New Journal</h3>
@@ -313,13 +415,16 @@ const JournalHomepage = () => {
                 onChange={(e) => setNewJournalTitle(e.target.value)}
                 placeholder="Enter journal title..."
                 className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 transition-colors"
-                onKeyDown={(e) => e.key === "Enter" && handleCreateJournal()}
+                onKeyDown={(e) => e.key === "Enter" && !createLoading && handleCreateJournal()}
+                disabled={createLoading}
+                autoFocus
               />
             </div>
             <div className="flex gap-3">
               <button
                 onClick={() => setShowCreateModal(false)}
-                className="flex-1 px-4 py-3 bg-gray-700 text-gray-300 rounded-xl font-medium hover:bg-gray-600 transition-colors"
+                disabled={createLoading}
+                className="flex-1 px-4 py-3 bg-gray-700 text-gray-300 rounded-xl font-medium hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancel
               </button>

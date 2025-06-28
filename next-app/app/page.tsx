@@ -279,7 +279,7 @@ const OraLandingPage = () => {
             <p className="text-gray-400 mb-5 lg:mb-10 font-medium text-base md:text-lg lg:text-xl">
               Listen to your thoughts flow
             </p>
-            <Link href="/login">
+            <Link href="/home">
               <button className="group relative px-10 cursor-pointer md:px-12 lg:px-16 py-4 md:py-5 lg:py-6 bg-gradient-to-r from-purple-600 via-purple-500 to-indigo-600 text-white rounded-full font-semibold text-lg md:text-xl lg:text-2xl tracking-wide transition-all duration-500 ease-out hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/40 border border-purple-400/40 hover:border-purple-300/60 backdrop-blur-sm overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-r from-purple-400/20 to-indigo-400/20 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out"></div>
