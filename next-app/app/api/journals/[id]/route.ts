@@ -5,7 +5,11 @@ import { PrismaClient } from "@/app/generated/prisma";
 
 const prisma = new PrismaClient();
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+interface RouteParams {
+  params: { id: string };
+}
+
+export async function GET(req: NextRequest, { params }: RouteParams) {
   try {
     const session = await auth.api.getSession({
         headers: req.headers
@@ -24,7 +28,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         });
     }
 
-    const { id } = await params;
+    const { id } = params;
     const journal = await prisma.journal.findUnique({
         where: {
             id,
@@ -68,7 +72,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 }
 
 
-export async function PUT(req: NextRequest, { params } : { params : { id: string }}) {
+export async function PUT(req: NextRequest, { params } : RouteParams) {
     try {
         const session = await auth.api.getSession({
             headers: req.headers
@@ -141,7 +145,7 @@ export async function PUT(req: NextRequest, { params } : { params : { id: string
     }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string }}) {
+export async function DELETE(req: NextRequest, { params }: RouteParams) {
     try {
         const session = await auth.api.getSession({
             headers: req.headers
