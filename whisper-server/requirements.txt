@@ -4,3 +4,4 @@ openai-whisper
 transformers
 torch
 ffmpeg-python
+python-multipart
