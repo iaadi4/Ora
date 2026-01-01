@@ -10,6 +10,8 @@ import { PrismaClient } from "@/app/generated/prisma";
 const prisma = new PrismaClient();
 const s3 = new S3Client({ region: process.env.BUCKET_REGION });
 
+const mlServerUrl = process.env.ML_SERVER_URL || "http://localhost:8000";
+
 function parseS3Url(url: string) {
   const match = url.match(
     /^https?:\/\/([^\.]+)\.s3[.-]([a-z0-9-]+)\.amazonaws\.com\/(.+)$/
@@ -53,7 +55,7 @@ export async function POST(req: NextRequest) {
     const formData = new FormData();
     formData.append("file", new File([fileBuffer], "audio.mp3", { type: "audio/mpeg" }));
 
-    const fastApiResponse = await fetch("http://localhost:8000/transcribe", {
+    const fastApiResponse = await fetch(mlServerUrl + "/transcribe", {
       method: "POST",
       body: formData,
     });
