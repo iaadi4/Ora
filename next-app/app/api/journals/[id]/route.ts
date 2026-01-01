@@ -5,11 +5,8 @@ import { PrismaClient } from "@/app/generated/prisma";
 
 const prisma = new PrismaClient();
 
-interface RouteParams {
-  params: { id: string };
-}
-
-export async function GET(req: NextRequest, { params }: RouteParams) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   try {
     const session = await auth.api.getSession({
         headers: req.headers
@@ -28,7 +25,6 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         });
     }
 
-    const { id } = params;
     const journal = await prisma.journal.findUnique({
         where: {
             id,
@@ -72,8 +68,9 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
 }
 
 
-export async function PUT(req: NextRequest, { params } : RouteParams) {
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
+        const { id } = await params;
         const session = await auth.api.getSession({
             headers: req.headers
         });
@@ -91,7 +88,6 @@ export async function PUT(req: NextRequest, { params } : RouteParams) {
             });
         }
 
-        const { id } = await params;
         const { content, title } = await req.json();
         const userId = user.id;
 
@@ -145,8 +141,9 @@ export async function PUT(req: NextRequest, { params } : RouteParams) {
     }
 }
 
-export async function DELETE(req: NextRequest, { params }: RouteParams) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
+        const { id } = await params;
         const session = await auth.api.getSession({
             headers: req.headers
         });
@@ -165,7 +162,6 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
         }
 
         const userId = user.id;
-        const { id } = await params;
         const journal = await prisma.journal.findFirst({
             where: {
                 id,
