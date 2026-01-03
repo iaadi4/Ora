@@ -1,28 +1,15 @@
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 const OraLandingPage = () => {
-  const [soundWaves, setSoundWaves] = useState(Array(40).fill(0));
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setSoundWaves(prev => prev.map((_, index) => {
-        const time = Date.now() * 0.002;
-        const wave1 = Math.sin(time + index * 0.4) * 30;
-        const wave2 = Math.sin(time * 1.5 + index * 0.3) * 20;
-        const baseHeight = 35 + Math.sin(index * 0.15) * 15;
-        const combinedHeight = baseHeight + wave1 + wave2;
-        return Math.max(10, Math.min(85, combinedHeight));
-      }));
-    }, 100);
-    
-    return () => clearInterval(interval);
-  }, []);
+  const router = useRouter();
 
   const gradientOrbs = [
-    { size: 500, x: 25, y: 25, colors: 'from-purple-600/15 to-indigo-800/20' },
-    { size: 450, x: 75, y: 70, colors: 'from-violet-500/10 to-purple-700/15' },
+    { size: 500, x: 25, y: 25, colors: 'from-purple-600/20 to-indigo-800/25' },
+    { size: 450, x: 75, y: 70, colors: 'from-violet-500/15 to-purple-700/20' },
+    { size: 400, x: 15, y: 75, colors: 'from-indigo-600/15 to-purple-800/20' },
   ];
 
   return (
@@ -31,7 +18,7 @@ const OraLandingPage = () => {
         {gradientOrbs.map((orb, index) => (
           <div
             key={index}
-            className={`absolute rounded-full bg-gradient-to-r ${orb.colors} blur-3xl opacity-70`}
+            className={`absolute rounded-full bg-gradient-to-r ${orb.colors} blur-3xl opacity-60`}
             style={{
               width: `${orb.size}px`,
               height: `${orb.size}px`,
@@ -91,6 +78,25 @@ const OraLandingPage = () => {
         />
       </div>
 
+      <div className="relative z-10 px-8 md:px-12 lg:px-16 py-8 md:py-10">
+        <div className="max-w-6xl mx-auto flex justify-between items-center">
+          <div className="flex items-center gap-2 md:gap-3">
+            <div className="w-8 h-8 md:w-10 md:h-10 bg-gradient-to-br from-purple-500 via-indigo-600 to-purple-700 rounded-full flex items-center justify-center">
+              <span className="text-white font-bold text-xs md:text-sm">O</span>
+            </div>
+            <span className="text-white font-bold text-lg md:text-xl">Ora</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <Link href="/login" className="group relative px-6 md:px-8 py-3 md:py-3 bg-transparent text-sm md:text-base text-white font-medium border border-purple-400/40 rounded-full hover:bg-purple-500/10 transition-all duration-300 hover:border-purple-400/80 hover:shadow-lg hover:shadow-purple-500/20">
+              Login
+            </Link>
+            <Link href="/signup" className="group relative px-6 md:px-8 py-3 md:py-3 bg-gradient-to-r from-purple-600 via-purple-500 to-indigo-600 text-white font-semibold text-sm md:text-base rounded-full transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-purple-500/40 border border-purple-400/40">
+              Sign up
+            </Link>
+          </div>
+        </div>
+      </div>
+
       <div className="relative z-10 px-8 md:px-12 lg:px-16 py-16 md:py-20 lg:py-24">
         <div className="max-w-6xl mx-auto text-center">
 
@@ -139,8 +145,8 @@ const OraLandingPage = () => {
               Your voice, your story
             </p>
             
-            <p className="text-lg md:text-xl lg:text-2xl text-gray-300 font-light max-w-3xl mx-auto leading-relaxed">
-              Capture thoughts and memories through the natural power of voice journaling
+            <p className="text-base md:text-lg lg:text-xl text-gray-300 font-light max-w-3xl mx-auto leading-relaxed">
+              Capture thoughts and memories through the natural power of voice journaling. Beautifully preserved in your personal journals.
             </p>
           </div>
 
@@ -150,20 +156,27 @@ const OraLandingPage = () => {
               animation: 'fadeInUp 1.5s ease-out 0.9s both',
             }}
           >
-            <div className="flex items-center justify-center space-x-1 h-28 md:h-36 lg:h-40 mb-6 md:mb-8 lg:mb-10 w-full max-w-6xl mx-auto">
-              {soundWaves.map((height, index) => (
-                <div
-                  key={index}
-                  className="bg-gradient-to-t from-purple-600 via-purple-500 to-purple-400 rounded-full transition-all duration-150 ease-out"
-                  style={{
-                    width: '4px',
-                    height: `${height}%`,
-                    minHeight: '8px',
-                    opacity: 0.7,
-                  }}
-                />
-              ))}
-            </div>
+            <div className="flex items-center justify-center space-x-1 h-32 md:h-40 lg:h-48 mb-6 md:mb-8 lg:mb-10 w-full max-w-6xl mx-auto">
+                {Array.from({ length: 40 }).map((_, index) => {
+                  const baseHeights = [20, 35, 50, 65, 75, 80, 82, 80, 75, 65, 50, 35, 25, 40, 60, 75, 85, 88, 85, 75, 60, 40, 30, 45, 65, 80, 90, 92, 90, 80, 65, 45, 35, 50, 70, 85, 95, 98, 95, 85];
+                  const delay = (index * 0.08);
+                  return (
+                    <div
+                      key={index}
+                      className="bg-gradient-to-t from-purple-600 via-purple-500 to-purple-400 rounded-full hover:from-indigo-600 hover:via-indigo-500 hover:to-indigo-400"
+                      style={{
+                        width: '5px',
+                        height: `${baseHeights[index]}%`,
+                        minHeight: '8px',
+                        opacity: 0.85,
+                        boxShadow: `0 0 12px rgba(147, 51, 234, ${0.4 + (baseHeights[index] / 100) * 0.6})`,
+                        animation: `waveform 1.5s ease-in-out infinite`,
+                        animationDelay: `${delay}s`,
+                      }}
+                    />
+                  );
+                })}
+              </div>
           </div>
 
           <div 
@@ -172,13 +185,12 @@ const OraLandingPage = () => {
               animation: 'fadeInUp 1.5s ease-out 1.2s both',
             }}
           >
-            <p className="text-gray-400 mb-5 lg:mb-10 font-medium text-base md:text-lg lg:text-xl">
-              Listen to your thoughts flow
+            <p className="text-gray-300 mb-8 lg:mb-12 font-medium text-base md:text-lg lg:text-xl">
+              Begin capturing your thoughts today
             </p>
-            <button className="group relative px-10 md:px-12 lg:px-16 py-4 md:py-5 lg:py-6 bg-gradient-to-r from-purple-600 via-purple-500 to-indigo-600 text-white rounded-full font-semibold text-lg md:text-xl lg:text-2xl tracking-wide transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/30 border border-purple-400/40">
-              <span className="relative z-10">
-                Begin Journaling
-              </span>
+            <button onClick={() => router.push('/home')} className="group relative px-12 md:px-16 lg:px-20 py-4 md:py-5 lg:py-6 bg-gradient-to-r from-purple-600 via-purple-500 to-indigo-600 text-white rounded-full font-bold text-lg md:text-xl lg:text-2xl tracking-wide transition-all duration-300 hover:scale-110 hover:shadow-2xl hover:shadow-purple-500/50 border border-purple-400/40 overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-purple-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-full"></div>
+              <span className="relative z-10">Begin Journaling</span>
             </button>
           </div>
         </div>
@@ -224,6 +236,17 @@ const OraLandingPage = () => {
           to {
             opacity: 1;
             transform: translateY(0);
+          }
+        }
+
+        @keyframes waveform {
+          0%, 100% {
+            transform: scaleY(1);
+            filter: brightness(1);
+          }
+          50% {
+            transform: scaleY(0.6);
+            filter: brightness(0.8);
           }
         }
       `}</style>
