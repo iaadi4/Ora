@@ -307,7 +307,7 @@ export default function JournalDetailPage() {
     setIsExportingPDF(true);
 
     try {
-      const response = await fetch("http://localhost:3000/api/export-pdf", {
+      const response = await fetch("/api/export-pdf", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -346,7 +346,7 @@ export default function JournalDetailPage() {
     setIsTranscribing(true);
 
     try {
-      const transcriptionResponse = await fetch("http://localhost:3000/api/transcribe",{
+      const transcriptionResponse = await fetch("/api/transcribe",{
           method: "POST",
           headers: {
             "Content-Type": "application/json",
